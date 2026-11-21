@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AquaDash — Underwater Fish Runner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #041c2c;
+      --bg-panel: #082d44;
+      --accent-cyan: #22d3ee;
+      --accent-coral: #ff6b4a;
+      --accent-gold: #fbbf24;
+      --text-main: #f0f9ff;
+      --text-muted: #94c5dc;
+      --border-soft: rgba(56, 189, 248, 0.22);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at top, #0a3d5c 0%, var(--bg-deep) 70%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 920px;
+      background: rgba(8, 45, 68, 0.82);
+      border: 1px solid var(--border-soft);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(8px);
+    }
+
+    header.top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #ff7e5f, #ff4b2b);
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      box-shadow: 0 6px 14px rgba(255, 107, 74, 0.35);
+    }
+
+    .brand h1 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .hud-stats {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stat-pill {
+      background: rgba(4, 28, 44, 0.75);
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
+      padding: 6px 12px;
+      text-align: center;
+      min-width: 82px;
+    }
+
+    .stat-pill .label {
+      display: block;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .stat-pill .value {
+      font-size: 1rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--accent-cyan);
+    }
+
+    .stat-pill.gold .value {
+      color: var(--accent-gold);
+    }
+
+    .stat-pill.pearl .value {
+      color: #fde047;
+    }
+
+    .toolbar-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: rgba(14, 65, 96, 0.85);
+      color: var(--text-main);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(34, 211, 238, 0.2);
+      border-color: var(--accent-cyan);
+      transform: translateY(-1px);
+    }
+
+    .icon-btn:active {
+      transform: translateY(0);
+    }
+
+    .stage-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 7;
+      min-height: 240px;
+      max-height: 400px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid rgba(56, 189, 248, 0.3);
+      background: #063452;
+      box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.35);
+      touch-action: manipulation;
+    }
+
+    canvas#gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      background: rgba(4, 24, 38, 0.62);
+      backdrop-filter: blur(3px);
+      transition: opacity 0.2s ease;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .overlay h2 {
+      font-size: clamp(1.35rem, 3.2vw, 2rem);
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+
+    .overlay p {
+      font-size: 0.92rem;
+      color: #cfe9f7;
+      max-width: 440px;
+      margin-bottom: 16px;
+      line-height: 1.45;
+    }
+
+    .overlay-stats {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, #22d3ee, #0284c7);
+      color: #031521;
+      border: none;
+      border-radius: 12px;
+      padding: 11px 24px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(34, 211, 238, 0.35);
+      transition: transform 0.14s ease, filter 0.14s ease;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+    }
+
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .touch-controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .ctrl-btn {
+      background: linear-gradient(180deg, #0e4a6f, #093552);
+      color: var(--text-main);
+      border: 1px solid rgba(56, 189, 248, 0.38);
+      border-radius: 12px;
+      padding: 10px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    .ctrl-btn:hover {
+      background: linear-gradient(180deg, #146391, #0b4469);
+    }
+
+    .ctrl-btn:active,
+    .ctrl-btn.active {
+      transform: scale(0.96);
+      background: #0284c7;
+    }
+
+    .hints {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: rgba(4, 28, 44, 0.9);
+      border: 1px solid var(--border-soft);
+      color: var(--text-main);
+      font-weight: 700;
+      font-size: 0.74rem;
+    }
+
+    @media (max-width: 600px) {
+      .app-shell {
+        padding: 12px;
+      }
+      .stage-wrap {
+        aspect-ratio: 4 / 3;
+      }
+      .controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .touch-controls {
+        justify-content: space-between;
+      }
+      .ctrl-btn {
+        flex: 1;
+      }
+      .hints {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="top-bar">
+      <div class="brand">
+        <div class="brand-badge" aria-hidden="true">🐠</div>
+        <div>
+          <h1>AquaDash</h1>
+          <p>Underwater Endless Fish Runner</p>
+        </div>
+      </div>
+
+      <div class="hud-stats">
+        <div class="stat-pill">
+          <span class="label">Score</span>
+          <span class="value" id="scoreVal">00000</span>
+        </div>
+        <div class="stat-pill gold">
+          <span class="label">High</span>
+          <span class="value" id="highScoreVal">00000</span>
+        </div>
+        <div class="stat-pill pearl">
+          <span class="label">Pearls</span>
+          <span class="value" id="pearlsVal">0</span>
+        </div>
+        <div class="stat-pill">
+          <span class="label">Speed</span>
+          <span class="value" id="speedVal">1.0x</span>
+        </div>
+        <div class="toolbar-btns">
+          <button class="icon-btn" id="pauseBtn" type="button" aria-label="Pause or resume game">Pause</button>
+          <button class="icon-btn" id="muteBtn" type="button" aria-label="Toggle sound effects">Sound: On</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="stage-wrap" id="stageWrap" aria-label="AquaDash game area">
+      <canvas id="gameCanvas"></canvas>
+
+      <div class="overlay" id="startOverlay">
+        <h2>Swim Fast, Dodge the Reef!</h2>
+        <p>
+          Jump over coral spikes and sea urchins, duck under floating jellyfish,
+          and collect glowing pearls for +25 bonus points.
+        </p>
+        <button class="primary-btn" id="startBtn" type="button">Start Swimming</button>
+      </div>
+
+      <div class="overlay hidden" id="pauseOverlay">
+        <h2>Game Paused</h2>
+        <p>Take a breather before diving back into the current.</p>
+        <button class="primary-btn" id="resumeBtn" type="button">Resume</button>
+      </div>
+
+      <div class="overlay hidden" id="gameOverOverlay">
+        <h2 id="gameOverTitle">Bumped the Reef!</h2>
+        <div class="overlay-stats" id="finalStats">Score: 0 · Best: 0</div>
+        <p id="newRecordMsg">Keep swimming to beat your high score!</p>
+        <button class="primary-btn" id="restartBtn" type="button">Swim Again</button>
+      </div>
+    </section>
+
+    <footer class="controls-bar">
+      <div class="touch-controls">
+        <button class="ctrl-btn" id="jumpBtn" type="button">▲ Jump / Swim Up</button>
+        <button class="ctrl-btn" id="duckBtn" type="button">▼ Dive / Duck</button>
+      </div>
+      <div class="hints">
+        <span><span class="kbd">Space</span> / <span class="kbd">↑</span> Jump</span>
+        <span><span class="kbd">↓</span> Dive</span>
+        <span><span class="kbd">P</span> Pause</span>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      const stageWrap = document.getElementById("stageWrap");
+
+      const scoreVal = document.getElementById("scoreVal");
+      const highScoreVal = document.getElementById("highScoreVal");
+      const pearlsVal = document.getElementById("pearlsVal");
+      const speedVal = document.getElementById("speedVal");
+      const gameOverTitle = document.getElementById("gameOverTitle");
+
+      const startOverlay = document.getElementById("startOverlay");
+      const pauseOverlay = document.getElementById("pauseOverlay");
+      const gameOverOverlay = document.getElementById("gameOverOverlay");
+      const finalStats = document.getElementById("finalStats");
+      const newRecordMsg = document.getElementById("newRecordMsg");
+
+      const startBtn = document.getElementById("startBtn");
+      const resumeBtn = document.getElementById("resumeBtn");
+      const restartBtn = document.getElementById("restartBtn");
+      const pauseBtn = document.getElementById("pauseBtn");
+      const muteBtn = document.getElementById("muteBtn");
+      const jumpBtn = document.getElementById("jumpBtn");
+      const duckBtn = document.getElementById("duckBtn");
+
+      // Logical game coordinates (scaled cleanly to any screen size)
+      const WORLD_W = 900;
+      const WORLD_H = 380;
+      const FLOOR_Y = 324;
+
+      let state = "ready"; // ready | running | paused | gameover
+      let rafId = null;
+      let lastTime = 0;
+      let distance = 0;
+      let score = 0;
+      let bonusScore = 0;
+      let pearlsCollected = 0;
+      let highScore = 0;
+      let baseSpeed = 290;
+      let speed = baseSpeed;
+      let worldTime = 0;
+      let jumpBufferTimer = 0;
+      let nextObstacleIn = 1.2;
+      let nextPearlIn = 2.6;
+      let lastMilestone = 0;
+      let isMuted = false;
+      let audioCtx = null;
+
+      try {
+        const saved = localStorage.getItem("aquadash_highscore");
+        if (saved && !Number.isNaN(Number(saved))) {
+          highScore = Math.max(0, Math.floor(Number(saved)));
+        }
+      } catch (err) {
+        highScore = 0;
+      }
+
+      const fish = {
+        x: 112,
+        y: FLOOR_Y - 40,
+        w: 56,
+        h: 34,
+        vy: 0,
+        gravity: 1620,
+        jumpForce: -660,
+        isGrounded: true,
+        isDucking: false,
+        tailPhase: 0
+      };
+
+      let obstacles = [];
+      let pearls = [];
+      let bubbles = [];
+      let particles = [];
+      let seaweeds = [];
+      let bgFish = [];
+      let floorOffset = 0;
+
+      function initScenery() {
+        bubbles = [];
+        for (let i = 0; i < 24; i++) {
+          bubbles.push({
+            x: Math.random() * WORLD_W,
+            y: Math.random() * FLOOR_Y,
+            r: 2 + Math.random() * 5,
+            speed: 18 + Math.random() * 34,
+            wobble: Math.random() * Math.PI * 2
+          });
+        }
+
+        seaweeds = [];
+        for (let i = 0; i < 12; i++) {
+          seaweeds.push({
+            x: i * 84 + Math.random() * 30,
+            h: 34 + Math.random() * 38,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+
+        bgFish = [];
+        for (let i = 0; i < 6; i++) {
+          bgFish.push({
+            x: Math.random() * WORLD_W,
+            y: 45 + Math.random() * 150,
+            s: 0.55 + Math.random() * 0.45,
+            v: 28 + Math.random() * 35
+          });
+        }
+      }
+
+      function ensureAudio() {
+        if (isMuted) return null;
+        if (!audioCtx) {
+          const AudioCtor = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtor) {
+            audioCtx = new AudioCtor();
+          }
+        }
+        if (audioCtx && audioCtx.state === "suspended") {
+          audioCtx.resume().catch(function () {});
+        }
+        return audioCtx;
+      }
+
+      function playTone(freqStart, freqEnd, duration, type, gainPeak) {
+        const ctxAudio = ensureAudio();
+        if (!ctxAudio) return;
+        const now = ctxAudio.currentTime;
+        const osc = ctxAudio.createOscillator();
+        const gain = ctxAudio.createGain();
+        osc.type = type || "sine";
+        osc.frequency.setValueAtTime(freqStart, now);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(40, freqEnd), now + duration);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(gainPeak || 0.14, now + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        osc.connect(gain);
+        gain.connect(ctxAudio.destination);
+        osc.start(now);
+        osc.stop(now + duration + 0.02);
+      }
+
+      function sfxJump() {
+        playTone(300, 620, 0.13, "sine", 0.13);
+      }
+
+      function sfxPearl() {
+        playTone(680, 1180, 0.14, "triangle", 0.15);
+      }
+
+      function sfxMilestone() {
+        playTone(520, 780, 0.1, "square", 0.07);
+        setTimeout(function () {
+          playTone(780, 1040, 0.14, "square", 0.07);
+        }, 90);
+      }
+
+      function sfxCrash() {
+        playTone(210, 65, 0.28, "sawtooth", 0.16);
+      }
+
+      function formatScore(n) {
+        return String(Math.floor(n)).padStart(5, "0");
+      }
+
+      function updateHUD() {
+        const total = Math.floor(score + bonusScore);
+        scoreVal.textContent = formatScore(total);
+        highScoreVal.textContent = formatScore(highScore);
+        pearlsVal.textContent = String(pearlsCollected);
+        speedVal.textContent = (speed / baseSpeed).toFixed(1) + "x";
+      }
+
+      function resizeCanvas() {
+        const rect = stageWrap.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.max(300, Math.round(rect.width * dpr));
+        canvas.height = Math.max(180, Math.round(rect.height * dpr));
+        drawScene();
+      }
+
+      function resetGame() {
+        distance = 0;
+        score = 0;
+        bonusScore = 0;
+        pearlsCollected = 0;
+        speed = baseSpeed;
+        worldTime = 0;
+        jumpBufferTimer = 0;
+        lastMilestone = 0;
+        nextObstacleIn = 1.05;
+        nextPearlIn = 2.2;
+        obstacles = [];
+        pearls = [];
+        particles = [];
+
+        fish.y = FLOOR_Y - fish.h;
+        fish.vy = 0;
+        fish.isGrounded = true;
+        fish.isDucking = false;
+        fish.tailPhase = 0;
+
+        updateHUD();
+      }
+
+      function showOnlyOverlay(overlayEl) {
+        startOverlay.classList.add("hidden");
+        pauseOverlay.classList.add("hidden");
+        gameOverOverlay.classList.add("hidden");
+        if (overlayEl) {
+          overlayEl.classList.remove("hidden");
+        }
+      }
+
+      function startGame() {
+        ensureAudio();
+        resetGame();
+        state = "running";
+        pauseBtn.textContent = "Pause";
+        showOnlyOverlay(null);
+        lastTime = performance.now();
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(loop);
+      }
+
+      function togglePause() {
+        if (state === "running") {
+          state = "paused";
+          pauseBtn.textContent = "Resume";
+          showOnlyOverlay(pauseOverlay);
+        } else if (state === "paused") {
+          state = "running";
+          pauseBtn.textContent = "Pause";
+          showOnlyOverlay(null);
+          lastTime = performance.now();
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(loop);
+        }
+      }
+
+      function getDeathFeedback(hitType) {
+        if (hitType === "jelly") {
+          const tips = [
+            "Hold Down Arrow (↓) or Dive to glide safely under floating jellyfish.",
+            "Watch for pink jellyfish at head height—duck early to slip underneath!"
+          ];
+          return {
+            title: "Stung by a Jellyfish!",
+            tip: tips[Math.floor(Math.random() * tips.length)]
+          };
+        }
+        if (hitType === "urchin") {
+          const tips = [
+            "Tap Space / ↑ briefly for a quick hop over spinning sea urchins.",
+            "Sea urchins hug the seabed—jump early and land fast to stay ready!"
+          ];
+          return {
+            title: "Pricked by a Sea Urchin!",
+            tip: tips[Math.floor(Math.random() * tips.length)]
+          };
+        }
+        const coralTips = [
+          "Hold Space or ↑ slightly longer to clear tall coral spikes cleanly.",
+          "Jump a little earlier when approaching tall coral reefs!"
+        ];
+        return {
+          title: "Bumped the Coral Reef!",
+          tip: coralTips[Math.floor(Math.random() * coralTips.length)]
+        };
+      }
+
+      function triggerGameOver(hitType) {
+        state = "gameover";
+        sfxCrash();
+        const total = Math.floor(score + bonusScore);
+        let isNewRecord = false;
+        if (total > highScore) {
+          highScore = total;
+          isNewRecord = true;
+          try {
+            localStorage.setItem("aquadash_highscore", String(highScore));
+          } catch (err) {
+            // ignore storage errors
+          }
+        }
+        updateHUD();
+        const feedback = getDeathFeedback(hitType);
+        gameOverTitle.textContent = isNewRecord ? "New High Score!" : feedback.title;
+        finalStats.textContent =
+          "Score: " + total + "  ·  Pearls: " + pearlsCollected + "  ·  Best: " + highScore;
+        newRecordMsg.textContent = isNewRecord
+          ? "You beat your best! Tip: " + feedback.tip
+          : "Tip: " + feedback.tip;
+        showOnlyOverlay(gameOverOverlay);
+      }
+
+      function executeJump() {
+        fish.vy = fish.jumpForce;
+        fish.isGrounded = false;
+        fish.isDucking = false;
+        jumpBufferTimer = 0;
+        sfxJump();
+        spawnBurst(fish.x + 8, fish.y + fish.h - 4, "#a5f3fc", 6);
+      }
+
+      function jump() {
+        if (state === "ready" || state === "gameover") {
+          startGame();
+          return;
+        }
+        if (state !== "running") return;
+        if (fish.isGrounded) {
+          executeJump();
+        } else {
+          // Buffer jump input for 90ms so pressing right before landing feels crisp
+          jumpBufferTimer = 0.09;
+        }
+      }
+
+      function releaseJump() {
+        // Variable jump height like Chrome Dino: short tap = lower hop
+        if (state === "running" && !fish.isGrounded && fish.vy < -260) {
+          fish.vy *= 0.62;
+        }
+      }
+
+      function setDuck(active) {
+        if (state !== "running") {
+          fish.isDucking = false;
+          duckBtn.classList.remove("active");
+          return;
+        }
+        fish.isDucking = active;
+        duckBtn.classList.toggle("active", active);
+        if (active && !fish.isGrounded && fish.vy < 420) {
+          fish.vy = 420; // quick dive back down
+        }
+      }
+
+      function spawnBurst(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const spd = 45 + Math.random() * 120;
+          particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * spd,
+            vy: Math.sin(angle) * spd,
+            r: 2 + Math.random() * 3.5,
+            life: 0.45 + Math.random() * 0.25,
+            maxLife: 0.7,
+            color: color
+          });
+        }
+      }
+
+      function spawnObstacle() {
+        const total = score + bonusScore;
+        const roll = Math.random();
+        let type = "coral";
+        if (total >= 120 && roll > 0.66) {
+          type = "jelly";
+        } else if (roll > 0.34) {
+          type = "urchin";
+        }
+
+        if (type === "coral") {
+          const h = 42 + Math.random() * 24;
+          const w = 28 + Math.random() * 14;
+          obstacles.push({
+            type: "coral",
+            x: WORLD_W + 30,
+            y: FLOOR_Y - h,
+            w: w,
+            h: h
+          });
+        } else if (type === "urchin") {
+          const size = 34 + Math.random() * 12;
+          obstacles.push({
+            type: "urchin",
+            x: WORLD_W + 30,
+            y: FLOOR_Y - size,
+            w: size,
+            h: size,
+            spin: 0
+          });
+        } else {
+          // Floating jellyfish at standing-fish head height: MUST duck to pass underneath (or jump high over)
+          const w = 40;
+          const h = 38;
+          const flyY = FLOOR_Y - 58;
+          obstacles.push({
+            type: "jelly",
+            x: WORLD_W + 30,
+            y: flyY,
+            baseY: flyY,
+            w: w,
+            h: h,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+
+        // Prevent any newly spawned obstacle from overlapping an existing pearl
+        const newest = obstacles[obstacles.length - 1];
+        for (let i = pearls.length - 1; i >= 0; i--) {
+          const p = pearls[i];
+          const overlapX = p.x + p.r + 95 > newest.x && p.x - p.r - 95 < newest.x + newest.w;
+          const overlapY = p.y + p.r + 44 > newest.y && p.y - p.r - 44 < newest.y + newest.h;
+          if (overlapX && overlapY) {
+            pearls.splice(i, 1);
+          }
+        }
+      }
+
+      function isPearlSafeFromObstacles(px, py, pr) {
+        const padX = 95;
+        const padY = 44;
+        for (let i = 0; i < obstacles.length; i++) {
+          const ob = obstacles[i];
+          const overlapX = px + pr + padX > ob.x && px - pr - padX < ob.x + ob.w;
+          const overlapY = py + pr + padY > ob.y && py - pr - padY < ob.y + ob.h;
+          if (overlapX && overlapY) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      function spawnPearl() {
+        const spawnX = WORLD_W + 40;
+        const r = 11;
+        const candidateOffsets = Math.random() > 0.5 ? [126, 60, 92] : [60, 126, 92];
+        for (let i = 0; i < candidateOffsets.length; i++) {
+          const py = FLOOR_Y - candidateOffsets[i];
+          if (isPearlSafeFromObstacles(spawnX, py, r)) {
+            pearls.push({
+              x: spawnX,
+              y: py,
+              r: r,
+              phase: Math.random() * Math.PI * 2
+            });
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function getFishHitbox() {
+        const h = fish.isDucking && fish.isGrounded ? 22 : fish.h;
+        const y = fish.isDucking && fish.isGrounded ? FLOOR_Y - 22 : fish.y;
+        return {
+          x: fish.x + 8,
+          y: y + 5,
+          w: fish.w - 16,
+          h: h - 10
+        };
+      }
+
+      function rectsOverlap(a, b) {
+        return (
+          a.x < b.x + b.w &&
+          a.x + a.w > b.x &&
+          a.y < b.y + b.h &&
+          a.y + a.h > b.y
+        );
+      }
+
+      function update(dt) {
+        worldTime += dt;
+
+        // Smooth distance-based speed curve like Chrome Dino (starts at 1.0x, caps smoothly at ~2.0x)
+        speed = Math.min(590, baseSpeed + Math.sqrt(distance) * 1.15);
+        distance += speed * dt;
+        score = distance / 24;
+        floorOffset = (floorOffset + speed * dt) % 48;
+
+        const total = Math.floor(score + bonusScore);
+        const milestone = Math.floor(total / 200);
+        if (milestone > lastMilestone && total >= 200) {
+          lastMilestone = milestone;
+          sfxMilestone();
+          spawnBurst(fish.x + 28, fish.y, "#fbbf24", 12);
+        }
+
+        // Fish vertical physics
+        fish.tailPhase += dt * (10 + (speed / baseSpeed) * 5);
+        fish.vy += fish.gravity * dt;
+        fish.y += fish.vy * dt;
+
+        if (jumpBufferTimer > 0) {
+          jumpBufferTimer = Math.max(0, jumpBufferTimer - dt);
+        }
+
+        const restY = FLOOR_Y - fish.h;
+        if (fish.y >= restY) {
+          fish.y = restY;
+          fish.vy = 0;
+          fish.isGrounded = true;
+          if (jumpBufferTimer > 0) {
+            executeJump();
+          }
+        }
+
+        // Spawners
+        nextObstacleIn -= dt;
+        if (nextObstacleIn <= 0) {
+          spawnObstacle();
+          const speedRatio = baseSpeed / speed;
+          nextObstacleIn = (1.12 + Math.random() * 0.82) * Math.max(0.68, speedRatio);
+        }
+
+        nextPearlIn -= dt;
+        if (nextPearlIn <= 0) {
+          const spawned = spawnPearl();
+          nextPearlIn = spawned ? (2.5 + Math.random() * 2.1) : 0.45;
+        }
+
+        const fBox = getFishHitbox();
+
+        // Update obstacles
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const ob = obstacles[i];
+          ob.x -= speed * dt;
+          if (ob.type === "jelly") {
+            ob.phase += dt * 4;
+            ob.y = ob.baseY + Math.sin(ob.phase) * 2.5;
+          } else if (ob.type === "urchin") {
+            ob.spin += dt * 3;
+          }
+
+          const obBox = ob.type === "jelly"
+            ? { x: ob.x + 5, y: ob.y + 4, w: ob.w - 10, h: ob.h - 8 }
+            : { x: ob.x + 5, y: ob.y + 5, w: ob.w - 10, h: ob.h - 10 };
+          if (rectsOverlap(fBox, obBox)) {
+            triggerGameOver(ob.type);
+            return;
+          }
+
+          if (ob.x + ob.w < -40) {
+            obstacles.splice(i, 1);
+          }
+        }
+
+        // Update pearls
+        for (let i = pearls.length - 1; i >= 0; i--) {
+          const p = pearls[i];
+          p.x -= speed * dt;
+          p.phase += dt * 5;
+          const py = p.y + Math.sin(p.phase) * 5;
+          const pBox = { x: p.x - p.r, y: py - p.r, w: p.r * 2, h: p.r * 2 };
+
+          if (rectsOverlap(fBox, pBox)) {
+            bonusScore += 25;
+            pearlsCollected += 1;
+            sfxPearl();
+            spawnBurst(p.x, py, "#fde047", 10);
+            pearls.splice(i, 1);
+            continue;
+          }
+          if (p.x + p.r < -20) {
+            pearls.splice(i, 1);
+          }
+        }
+
+        // Update scenery
+        for (let i = 0; i < bubbles.length; i++) {
+          const b = bubbles[i];
+          b.y -= b.speed * dt;
+          b.x -= speed * 0.12 * dt;
+          b.wobble += dt * 2.5;
+          if (b.y < -10) {
+            b.y = FLOOR_Y + 6;
+            b.x = Math.random() * WORLD_W;
+          }
+          if (b.x < -10) b.x = WORLD_W + 10;
+        }
+
+        for (let i = 0; i < seaweeds.length; i++) {
+          const sw = seaweeds[i];
+          sw.x -= speed * 0.45 * dt;
+          sw.phase += dt * 2.2;
+          if (sw.x < -30) {
+            sw.x = WORLD_W + 30 + Math.random() * 40;
+          }
+        }
+
+        for (let i = 0; i < bgFish.length; i++) {
+          const bf = bgFish[i];
+          bf.x -= (bf.v + speed * 0.14) * dt;
+          if (bf.x < -40) {
+            bf.x = WORLD_W + 40 + Math.random() * 90;
+            bf.y = 40 + Math.random() * 155;
+          }
+        }
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const pt = particles[i];
+          pt.x += pt.vx * dt;
+          pt.y += pt.vy * dt;
+          pt.life -= dt;
+          if (pt.life <= 0) particles.splice(i, 1);
+        }
+
+        updateHUD();
+      }
+
+      function drawFish() {
+        const ducking = fish.isDucking && fish.isGrounded;
+        const drawH = ducking ? 22 : fish.h;
+        const drawY = ducking ? FLOOR_Y - 22 : fish.y;
+        const cx = fish.x + fish.w / 2;
+        const cy = drawY + drawH / 2;
+        const tailWag = Math.sin(fish.tailPhase) * 6;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        // Slight tilt when jumping/diving
+        let tilt = 0;
+        if (!fish.isGrounded) {
+          tilt = Math.max(-0.28, Math.min(0.26, fish.vy / 1600));
+        }
+        ctx.rotate(tilt);
+
+        // Tail fin
+        ctx.fillStyle = "#ff5a36";
+        ctx.beginPath();
+        ctx.moveTo(-fish.w / 2 + 6, 0);
+        ctx.lineTo(-fish.w / 2 - 12, -12 + tailWag);
+        ctx.lineTo(-fish.w / 2 - 12, 12 + tailWag);
+        ctx.closePath();
+        ctx.fill();
+
+        // Top dorsal fin
+        ctx.fillStyle = "#ff8552";
+        ctx.beginPath();
+        ctx.moveTo(-8, -drawH / 2 + 2);
+        ctx.quadraticCurveTo(4, -drawH / 2 - 10, 12, -drawH / 2 + 3);
+        ctx.closePath();
+        ctx.fill();
+
+        // Fish body (bright clownfish orange)
+        const bodyGrad = ctx.createLinearGradient(-24, -14, 24, 14);
+        bodyGrad.addColorStop(0, "#ff9248");
+        bodyGrad.addColorStop(1, "#ff4d29");
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, fish.w / 2 - 2, drawH / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // White clownfish stripes
+        ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+        ctx.fillRect(-10, -drawH / 2 + 2, 6, drawH - 4);
+        ctx.fillRect(4, -drawH / 2 + 3, 5, drawH - 6);
+
+        // Eye
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(16, -3, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#041c2c";
+        ctx.beginPath();
+        ctx.arc(17.5, -3, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Smile
+        ctx.strokeStyle = "#5c1709";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(16, 3, 4.5, 0.15, 1.35);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      function drawObstacle(ob) {
+        if (ob.type === "coral") {
+          ctx.save();
+          ctx.fillStyle = "#f43f5e";
+          ctx.beginPath();
+          ctx.moveTo(ob.x, ob.y + ob.h);
+          ctx.lineTo(ob.x + ob.w * 0.25, ob.y + ob.h * 0.28);
+          ctx.lineTo(ob.x + ob.w * 0.45, ob.y + ob.h * 0.55);
+          ctx.lineTo(ob.x + ob.w * 0.58, ob.y);
+          ctx.lineTo(ob.x + ob.w * 0.78, ob.y + ob.h * 0.45);
+          ctx.lineTo(ob.x + ob.w, ob.y + ob.h);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = "#fda4af";
+          ctx.beginPath();
+          ctx.arc(ob.x + ob.w * 0.58, ob.y + 6, 3.2, 0, Math.PI * 2);
+          ctx.arc(ob.x + ob.w * 0.25, ob.y + ob.h * 0.34, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else if (ob.type === "urchin") {
+          const cx = ob.x + ob.w / 2;
+          const cy = ob.y + ob.h / 2;
+          const r = ob.w / 2;
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(ob.spin || 0);
+          ctx.fillStyle = "#581c87";
+          const spikes = 12;
+          ctx.beginPath();
+          for (let i = 0; i < spikes * 2; i++) {
+            const rad = i % 2 === 0 ? r : r * 0.55;
+            const ang = (i * Math.PI) / spikes;
+            const px = Math.cos(ang) * rad;
+            const py = Math.sin(ang) * rad;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = "#c084fc";
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else {
+          // Floating jellyfish
+          const cx = ob.x + ob.w / 2;
+          ctx.save();
+          ctx.fillStyle = "rgba(232, 121, 249, 0.86)";
+          ctx.beginPath();
+          ctx.arc(cx, ob.y + 16, ob.w / 2, Math.PI, 0, false);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.strokeStyle = "rgba(245, 208, 254, 0.85)";
+          ctx.lineWidth = 2.2;
+          for (let t = -1; t <= 1; t++) {
+            const tx = cx + t * 9;
+            ctx.beginPath();
+            ctx.moveTo(tx, ob.y + 16);
+            ctx.quadraticCurveTo(
+              tx + Math.sin(worldTime * 8 + t) * 5,
+              ob.y + 28,
+              tx,
+              ob.y + ob.h
+            );
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }
+
+      function drawPearl(p) {
+        const py = p.y + Math.sin(p.phase) * 5;
+        ctx.save();
+        const glow = ctx.createRadialGradient(p.x, py, 2, p.x, py, p.r * 2);
+        glow.addColorStop(0, "rgba(254, 240, 138, 0.95)");
+        glow.addColorStop(0.5, "rgba(250, 204, 21, 0.45)");
+        glow.addColorStop(1, "rgba(250, 204, 21, 0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(p.x, py, p.r * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#fef9c3";
+        ctx.beginPath();
+        ctx.arc(p.x, py, p.r * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawScene() {
+        const scaleX = canvas.width / WORLD_W;
+        const scaleY = canvas.height / WORLD_H;
+
+        ctx.save();
+        ctx.scale(scaleX, scaleY);
+
+        // Smooth Day / Deep-Sea Twilight cycle every 500 points
+        const total = score + bonusScore;
+        const nightMix = (Math.sin((total / 500) * Math.PI - Math.PI / 2) + 1) / 2;
+        const topColor = nightMix > 0.65 ? "#06233d" : "#0b5c8a";
+        const midColor = nightMix > 0.65 ? "#031526" : "#063b5c";
+
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, WORLD_H);
+        bgGrad.addColorStop(0, topColor);
+        bgGrad.addColorStop(0.82, midColor);
+        bgGrad.addColorStop(1, "#042338");
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+        // Underwater sunbeams
+        ctx.save();
+        ctx.globalAlpha = 0.08;
+        ctx.fillStyle = "#bae6fd";
+        for (let i = 0; i < 4; i++) {
+          const rx = 120 + i * 220 + Math.sin(worldTime + i) * 18;
+          ctx.beginPath();
+          ctx.moveTo(rx, 0);
+          ctx.lineTo(rx + 68, 0);
+          ctx.lineTo(rx - 40, FLOOR_Y);
+          ctx.lineTo(rx - 105, FLOOR_Y);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // Distant silhouette fish
+        ctx.fillStyle = "rgba(125, 211, 252, 0.16)";
+        for (let i = 0; i < bgFish.length; i++) {
+          const bf = bgFish[i];
+          ctx.save();
+          ctx.translate(bf.x, bf.y);
+          ctx.scale(bf.s, bf.s);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 14, 7, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(12, 0);
+          ctx.lineTo(22, -6);
+          ctx.lineTo(22, 6);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Background swaying seaweed
+        for (let i = 0; i < seaweeds.length; i++) {
+          const sw = seaweeds[i];
+          const sway = Math.sin(sw.phase) * 9;
+          ctx.strokeStyle = "rgba(16, 185, 129, 0.35)";
+          ctx.lineWidth = 5;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(sw.x, FLOOR_Y + 4);
+          ctx.quadraticCurveTo(sw.x + sway, FLOOR_Y - sw.h * 0.5, sw.x + sway * 1.4, FLOOR_Y - sw.h);
+          ctx.stroke();
+        }
+
+        // Floating bubbles
+        for (let i = 0; i < bubbles.length; i++) {
+          const b = bubbles[i];
+          const bx = b.x + Math.sin(b.wobble) * 3;
+          ctx.strokeStyle = "rgba(186, 230, 253, 0.42)";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(bx, b.y, b.r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Sandy ocean floor
+        const sandGrad = ctx.createLinearGradient(0, FLOOR_Y, 0, WORLD_H);
+        sandGrad.addColorStop(0, "#d9a760");
+        sandGrad.addColorStop(1, "#a67538");
+        ctx.fillStyle = sandGrad;
+        ctx.fillRect(0, FLOOR_Y, WORLD_W, WORLD_H - FLOOR_Y);
+
+        // Scrolling seabed pebbles/dashes
+        ctx.fillStyle = "rgba(113, 63, 18, 0.35)";
+        for (let x = -floorOffset; x < WORLD_W + 48; x += 48) {
+          ctx.fillRect(x, FLOOR_Y + 12, 18, 4);
+          ctx.fillRect(x + 22, FLOOR_Y + 26, 10, 4);
+        }
+
+        // Pearls & Obstacles
+        for (let i = 0; i < pearls.length; i++) {
+          drawPearl(pearls[i]);
+        }
+        for (let i = 0; i < obstacles.length; i++) {
+          drawObstacle(obstacles[i]);
+        }
+
+        // Player fish
+        drawFish();
+
+        // Splash / sparkle particles
+        for (let i = 0; i < particles.length; i++) {
+          const pt = particles[i];
+          ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+          ctx.fillStyle = pt.color;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        ctx.restore();
+      }
+
+      function loop(now) {
+        if (state !== "running") return;
+        const dt = Math.min(0.05, Math.max(0, (now - lastTime) / 1000));
+        lastTime = now;
+        update(dt);
+        drawScene();
+        if (state === "running") {
+          rafId = requestAnimationFrame(loop);
+        }
+      }
+
+      // Keyboard controls
+      window.addEventListener("keydown", function (e) {
+        if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
+          e.preventDefault();
+          jump();
+        } else if (e.code === "ArrowDown" || e.code === "KeyS") {
+          e.preventDefault();
+          setDuck(true);
+        } else if (e.code === "KeyP") {
+          e.preventDefault();
+          togglePause();
+        }
+      });
+
+      window.addEventListener("keyup", function (e) {
+        if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
+          releaseJump();
+        } else if (e.code === "ArrowDown" || e.code === "KeyS") {
+          setDuck(false);
+        }
+      });
+
+      // Mouse / touch controls on stage and buttons
+      stageWrap.addEventListener("pointerdown", function (e) {
+        if (e.target.closest("button")) return;
+        jump();
+      });
+
+      startBtn.addEventListener("click", startGame);
+      restartBtn.addEventListener("click", startGame);
+      resumeBtn.addEventListener("click", togglePause);
+      pauseBtn.addEventListener("click", togglePause);
+
+      muteBtn.addEventListener("click", function () {
+        isMuted = !isMuted;
+        muteBtn.textContent = isMuted ? "Sound: Off" : "Sound: On";
+      });
+
+      jumpBtn.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        jump();
+      });
+      jumpBtn.addEventListener("pointerup", function () {
+        releaseJump();
+      });
+
+      duckBtn.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        setDuck(true);
+      });
+      duckBtn.addEventListener("pointerup", function () {
+        setDuck(false);
+      });
+      duckBtn.addEventListener("pointerleave", function () {
+        setDuck(false);
+      });
+
+      window.addEventListener("resize", resizeCanvas);
+
+      window.onload = function () {
+        initScenery();
+        resetGame();
+        resizeCanvas();
+      };
+    })();
+  </script>
+</body>
+</html>
